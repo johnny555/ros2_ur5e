@@ -1,0 +1,66 @@
+version: '3'
+services:
+  ursim:
+   image: ursim_img
+   privileged: true
+   environment:
+    - ROBOT_MODEL=UR5e
+    - DISPLAY=:0
+   networks:
+    static_test_net:
+     ipv4_address: 192.168.56.101
+   ports:
+      - "5900:5900"
+      - "29999:29999"
+      - "8080:8080"
+      - "30001-30004:30001-30004"
+   volumes:
+      - ./src/ur_driver/ur_robot_driver/resources/ursim_driver/ursim/aux/.vol/:/ursim/programs
+   build:
+    context: ./src/ur_driver/ur_robot_driver/resources/ursim_driver/ursim/.
+    dockerfile: g5/Dockerfile
+    args:
+     URSIM: "https://s3-eu-west-1.amazonaws.com/ur-support-site/118926/URSim_Linux-5.11.1.108318.tar.gz"
+     VERSION: 5.11.1.108318
+     #URSIM: https://s3-eu-west-1.amazonaws.com/ur-support-site/116229/URSim_Linux-3.15.3.106223.tar.gz
+     #VERSION: 3.15.3.106223
+
+
+  rolling-desktop-full:
+    networks:
+     static_test_net:
+      ipv4_address: 192.168.56.1
+    ports:
+      - "5566:5566"
+    build: .
+    volumes: 
+      - ../:/workspace:cached
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /mnt/wslg:/mnt/wslg
+      - /usr/lib/wsl:/usr/lib/wsl
+      
+    devices: 
+      - /dev/dxg:/dev/dxg
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    environment: 
+      - DISPLAY=:0
+      - WAYLAND_DISPLAY
+      - XDG_RUNTIME_DIR
+      - PULSE_SERVER
+    
+    command: /bin/sh -c "while sleep 1000; do :; done"
+
+networks:
+ static_test_net:
+  driver: bridge
+  ipam:
+   config:
+    - subnet: 192.168.0.0/16
